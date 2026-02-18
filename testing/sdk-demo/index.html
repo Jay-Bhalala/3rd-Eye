@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3rd Eye SDK — Test Page</title>
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0a0a0a;
+      color: #ededed;
+      padding: 2rem;
+      max-width: 800px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .subtitle {
+      color: #888;
+      margin-bottom: 2rem;
+    }
+
+    h2 {
+      font-size: 1.25rem;
+      margin: 2rem 0 1rem;
+      color: #36aef8;
+    }
+
+    form,
+    .action-panel {
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    label {
+      display: block;
+      font-size: 0.85rem;
+      color: #aaa;
+      margin-bottom: 0.25rem;
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      padding: 0.6rem 0.8rem;
+      border-radius: 8px;
+      border: 1px solid #444;
+      background: #111;
+      color: #eee;
+      font-size: 0.95rem;
+      margin-bottom: 1rem;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      outline: none;
+      border-color: #36aef8;
+    }
+
+    button {
+      padding: 0.6rem 1.2rem;
+      border-radius: 8px;
+      border: none;
+      background: #36aef8;
+      color: #fff;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.95rem;
+      transition: background 0.2s;
+    }
+
+    button:hover {
+      background: #0c95e9;
+    }
+
+    button.secondary {
+      background: #333;
+      color: #ccc;
+    }
+
+    button.secondary:hover {
+      background: #444;
+    }
+
+    .row {
+      display: flex;
+      gap: 0.75rem;
+    }
+
+    .console-hint {
+      background: #1a1a2e;
+      border: 1px solid #2a2a4e;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-top: 2rem;
+      font-size: 0.85rem;
+      color: #8888cc;
+    }
+
+    code {
+      background: #2a2a2a;
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      font-size: 0.85rem;
+    }
+
+    .status {
+      font-size: 0.8rem;
+      color: #666;
+      margin-top: 0.5rem;
+    }
+
+    hr {
+      border: none;
+      border-top: 1px solid #222;
+      margin: 2rem 0;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>🔮 3rd Eye SDK — Test Page</h1>
+  <p class="subtitle">Open DevTools (F12) → Console to see the SDK in action.</p>
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- FORM 1: Search (The scanner should find this)                     -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <h2>🔍 Search Products</h2>
+  <form id="search-form" action="/search" method="GET"
+    onsubmit="event.preventDefault(); alert('Search submitted: ' + this.q.value);">
+    <label for="q">Search Query</label>
+    <input type="text" id="q" name="q" placeholder="e.g. wireless headphones" required>
+
+    <label for="category">Category</label>
+    <select id="category" name="category">
+      <option value="">All Categories</option>
+      <option value="electronics">Electronics</option>
+      <option value="clothing">Clothing</option>
+      <option value="books">Books</option>
+    </select>
+
+    <button type="submit">Search</button>
+    <p class="status">Form ID: <code>search-form</code> | Method: GET | Action: /search</p>
+  </form>
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- FORM 2: Login (The scanner should find this)                      -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <h2>🔐 User Login</h2>
+  <form id="login-form" action="/api/auth/login" method="POST"
+    onsubmit="event.preventDefault(); alert('Login attempted: ' + this.email.value);">
+    <label for="email">Email Address</label>
+    <input type="email" id="email" name="email" placeholder="you@example.com" required>
+
+    <label for="password">Password</label>
+    <input type="password" id="password" name="password" placeholder="••••••••" required>
+
+    <button type="submit">Sign In</button>
+    <p class="status">Form ID: <code>login-form</code> | Method: POST | Action: /api/auth/login</p>
+  </form>
+
+  <hr>
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- STANDALONE BUTTONS (The scanner should find these)                 -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <h2>⚡ Actions</h2>
+  <div class="action-panel">
+    <p style="margin-bottom: 1rem; color: #aaa;">Standalone buttons with <code>aria-label</code> attributes:</p>
+    <div class="row">
+      <button id="add-to-cart" aria-label="Add to Cart" onclick="alert('Added to cart!')">🛒 Add to Cart</button>
+      <button id="subscribe-btn" aria-label="Subscribe to Newsletter" onclick="alert('Subscribed!')">📧
+        Subscribe</button>
+      <button id="dark-mode-toggle" aria-label="Toggle Dark Mode" class="secondary"
+        onclick="alert('Dark mode toggled!')">🌙 Dark Mode</button>
+    </div>
+    <p class="status" style="margin-top: 1rem;">These buttons are outside any form — the scanner picks them up
+      separately.</p>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- Console Instructions                                               -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <div class="console-hint">
+    <strong>🧪 How to verify:</strong><br>
+    1. Open DevTools → Console<br>
+    2. Look for <code>[3rdEye]</code> log messages<br>
+    3. Check scanned elements: <code>ThirdEye.getScannedElements()</code><br>
+    4. Check generated schemas: <code>ThirdEye.getSchemas()</code><br>
+    5. If WebMCP is enabled: <code>navigator.modelContext</code> will have registered tools<br>
+    6. Try manual init: <code>ThirdEye.init({ siteId: "test_123", debug: true })</code>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- SDK Script — Auto-init via data attributes                         -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <script src="./3rdeye.min.js" data-site-id="test_site_001" data-endpoint="http://localhost:3002" data-debug="true"
+    data-ingest-url="http://localhost:3002/api/v1/telemetry">
+    </script>
+
+</body>
+
+</html>

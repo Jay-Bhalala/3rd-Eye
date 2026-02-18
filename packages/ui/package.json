@@ -1,0 +1,29 @@
+{
+    "name": "@3rdeye/ui",
+    "version": "0.0.0",
+    "private": true,
+    "license": "MIT",
+    "main": "./src/index.ts",
+    "types": "./src/index.ts",
+    "exports": {
+        ".": "./src/index.ts",
+        "./*.css": "./src/*.css"
+    },
+    "scripts": {
+        "build": "tsc",
+        "dev": "tsc --watch",
+        "clean": "rm -rf dist",
+        "lint": "tsc --noEmit"
+    },
+    "dependencies": {
+        "react": "^19.0.0",
+        "react-dom": "^19.0.0"
+    },
+    "devDependencies": {
+        "@3rdeye/tsconfig": "workspace:*",
+        "@types/react": "^19.0.8",
+        "@types/react-dom": "^19.0.3",
+        "tailwindcss": "^3.4.17",
+        "typescript": "^5.7.3"
+    }
+}

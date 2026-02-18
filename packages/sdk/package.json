@@ -1,0 +1,31 @@
+{
+    "name": "@3rdeye/sdk",
+    "version": "0.1.0",
+    "private": false,
+    "license": "MIT",
+    "description": "3rd Eye — Client-side SDK for WebMCP configuration",
+    "main": "./dist/3rdeye.min.js",
+    "module": "./dist/index.mjs",
+    "types": "./dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.mjs",
+            "require": "./dist/3rdeye.min.js"
+        }
+    },
+    "files": [
+        "dist"
+    ],
+    "scripts": {
+        "build": "tsup",
+        "dev": "tsup --watch",
+        "clean": "rm -rf dist",
+        "lint": "tsc --noEmit"
+    },
+    "devDependencies": {
+        "@3rdeye/tsconfig": "workspace:*",
+        "tsup": "^8.3.5",
+        "typescript": "^5.7.3"
+    }
+}
