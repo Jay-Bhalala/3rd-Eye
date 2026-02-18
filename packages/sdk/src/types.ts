@@ -50,6 +50,9 @@ export interface ScannedInput {
 
     /** The associated `<label>` text, if found. */
     label?: string;
+
+    /** Developer-provided parameter description via `data-tool-param`. */
+    overrideParamDescription?: string;
 }
 
 /**
@@ -85,6 +88,17 @@ export interface ScannedElement {
 
     /** Visible text content of the button. */
     textContent?: string;
+
+    // ── Declarative overrides (from `data-tool-*` HTML attributes) ────────────
+
+    /** Developer-provided tool name via `data-tool-name`. */
+    overrideName?: string;
+
+    /** Developer-provided description via `data-tool-description`. */
+    overrideDescription?: string;
+
+    /** Developer-provided annotations via `data-tool-readonly`, etc. */
+    overrideAnnotations?: ToolAnnotations;
 }
 
 // ─── Tool Annotations (W3C WebMCP Spec) ──────────────────────────────────────

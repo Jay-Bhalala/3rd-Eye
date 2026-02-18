@@ -198,6 +198,65 @@
       separately.</p>
   </div>
 
+  <hr>
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- DECLARATIVE OVERRIDES (data-tool-* attributes)                     -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <h2>🏷️ Declarative Overrides (<code>data-tool-*</code>)</h2>
+
+  <!-- Form with full declarative overrides — no AI call needed -->
+  <form id="feedback-form" action="/api/feedback" method="POST"
+    data-tool-name="submit_feedback"
+    data-tool-description="Submit user feedback about the product"
+    data-tool-open-world
+    onsubmit="event.preventDefault(); alert('Feedback submitted: ' + this.message.value);">
+    <label for="feedback-name">Your Name</label>
+    <input type="text" id="feedback-name" name="name" placeholder="Jane Doe"
+      data-tool-param="The user's full name" required>
+
+    <label for="message">Feedback</label>
+    <textarea id="message" name="message" placeholder="Tell us what you think..."
+      data-tool-param="The feedback message content" required></textarea>
+
+    <button type="submit">Send Feedback</button>
+    <p class="status">
+      Overrides: <code>data-tool-name="submit_feedback"</code> |
+      <code>data-tool-description</code> |
+      <code>data-tool-open-world</code> |
+      <code>data-tool-param</code> on inputs
+    </p>
+  </form>
+
+  <!-- Non-standard element (div) with data-tool-name — scanAnnotated() picks this up -->
+  <div class="action-panel"
+    id="chat-widget"
+    data-tool-name="open_support_chat"
+    data-tool-description="Open the live support chat widget"
+    data-tool-readonly
+    onclick="alert('Chat widget opened!')"
+    style="cursor: pointer;">
+    <p>💬 <strong>Need help?</strong> Click here to chat with support.</p>
+    <p class="status">
+      This is a <code>&lt;div&gt;</code> — not a button or form. Picked up by <code>scanAnnotated()</code> via
+      <code>data-tool-name</code>.
+    </p>
+  </div>
+
+  <!-- Button with data-tool-ignore — should NOT appear in scanned results -->
+  <div class="action-panel">
+    <p style="margin-bottom: 1rem; color: #aaa;">This button is excluded with <code>data-tool-ignore</code>:</p>
+    <button id="admin-btn" aria-label="Admin Panel" data-tool-ignore onclick="alert('Admin only!')">
+      🔒 Admin Panel (ignored)
+    </button>
+    <p class="status" style="margin-top: 1rem;">
+      Has <code>data-tool-ignore</code> — should NOT appear in
+      <code>ThirdEye.getScannedElements()</code> or <code>ThirdEye.getSchemas()</code>.
+    </p>
+  </div>
+
+  <hr>
+
   <!-- ═══════════════════════════════════════════════════════════════════ -->
   <!-- Console Instructions                                               -->
   <!-- ═══════════════════════════════════════════════════════════════════ -->
@@ -207,8 +266,10 @@
     2. Look for <code>[3rdEye]</code> log messages<br>
     3. Check scanned elements: <code>ThirdEye.getScannedElements()</code><br>
     4. Check generated schemas: <code>ThirdEye.getSchemas()</code><br>
-    5. If WebMCP is enabled: <code>navigator.modelContext</code> will have registered tools<br>
-    6. Try manual init: <code>ThirdEye.init({ siteId: "test_123", debug: true })</code>
+    5. Verify overrides: schemas should show <code>"submit_feedback"</code> and <code>"open_support_chat"</code><br>
+    6. Verify ignore: <code>"admin_panel"</code> should NOT appear in schemas<br>
+    7. If WebMCP is enabled: <code>navigator.modelContext</code> will have registered tools<br>
+    8. Try manual init: <code>ThirdEye.init({ siteId: "test_123", debug: true })</code>
   </div>
 
   <!-- ═══════════════════════════════════════════════════════════════════ -->

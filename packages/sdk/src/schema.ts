@@ -36,6 +36,7 @@ function inputsToSchema(element: ScannedElement): ToolInputSchema {
             properties[input.name] = {
                 type: input.inputType === "number" ? "number" : "string",
                 description:
+                    input.overrideParamDescription ||
                     input.label ||
                     input.placeholder ||
                     `The ${input.name} field (${input.inputType})`,
@@ -59,16 +60,19 @@ function inferFormAnnotations(method?: string): ToolAnnotations {
 }
 
 function schemaFromForm(element: ScannedElement): ToolSchema {
-    const name = toToolName(element.id || "unknown_form");
+    const name = element.overrideName ?? toToolName(element.id || "unknown_form");
     const inputCount = element.inputs?.length ?? 0;
+    const description = element.overrideDescription ??
+        `Submit the "${element.id || "unknown"}" form (${element.method ?? "GET"}, ${inputCount} field${inputCount !== 1 ? "s" : ""})`;
+    const annotations = element.overrideAnnotations ?? inferFormAnnotations(element.method);
 
     return {
         name,
-        description: `Submit the "${element.id || "unknown"}" form (${element.method ?? "GET"}, ${inputCount} field${inputCount !== 1 ? "s" : ""})`,
+        description,
         parameters: inputsToSchema(element),
         selector: element.selector,
         elementType: "form",
-        annotations: inferFormAnnotations(element.method),
+        annotations,
     };
 }
 
@@ -93,15 +97,17 @@ function inferButtonAnnotations(element: ScannedElement): ToolAnnotations {
 function schemaFromButton(element: ScannedElement): ToolSchema {
     const label =
         element.ariaLabel || element.textContent || element.id || "unknown_button";
-    const name = toToolName(label);
+    const name = element.overrideName ?? toToolName(label);
+    const description = element.overrideDescription ?? `Click the "${label}" button`;
+    const annotations = element.overrideAnnotations ?? inferButtonAnnotations(element);
 
     return {
         name,
-        description: `Click the "${label}" button`,
+        description,
         parameters: { type: "object", properties: {}, required: [] },
         selector: element.selector,
         elementType: "button",
-        annotations: inferButtonAnnotations(element),
+        annotations,
     };
 }
 
@@ -186,7 +192,18 @@ export async function fetchSchemas(
         if (cached) return cached;
     }
 
-    // ── 2. Try API (with 5s timeout) ────────────────────────────────────────
+    // ── 2. Skip API if every element has developer-provided overrides ───────
+    const allOverridden = elements.every((e) => e.overrideName && e.overrideDescription);
+    if (allOverridden) {
+        const schemas = generateLocalSchemas(elements);
+        log.info(
+            `🧠 All ${schemas.length} element(s) have declarative overrides — skipping API`,
+            schemas,
+        );
+        return schemas;
+    }
+
+    // ── 3. Try API (with 15s timeout) ────────────────────────────────────────
     if (endpoint) {
         try {
             const controller = new AbortController();
@@ -231,7 +248,7 @@ export async function fetchSchemas(
         }
     }
 
-    // ── 3. Local fallback ───────────────────────────────────────────────────
+    // ── 4. Local fallback ───────────────────────────────────────────────────
     const schemas = generateLocalSchemas(elements);
     log.info(`🧠 Generated ${schemas.length} schema(s) locally (fallback)`, schemas);
     return schemas;
