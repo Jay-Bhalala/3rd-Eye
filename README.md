@@ -135,22 +135,22 @@ All three passes honour `data-tool-ignore` (excluded) and `data-tool-*` declarat
 
 ```
 ┌─────── Every time an AI agent calls a tool ──────────────────────┐
-│                                                                   │
-│  A. trackEvent("TOOL_ATTEMPT")     ← We log what was attempted  │
-│                                                                   │
-│  B. User Confirmation (NEW):                                      │
+│                                                                  │
+│  A. trackEvent("TOOL_ATTEMPT")     ← We log what was attempted   │
+│                                                                  │
+│  B. User Confirmation (NEW):                                     │
 │     └─ If destructiveHint: true → requestUserInteraction()       │
 │        → Native browser confirmation dialog                      │
-│                                                                   │
-│  C. DOM Interaction:                                              │
+│                                                                  │
+│  C. DOM Interaction:                                             │
 │     ├─ FORM:  Fill each input with args → requestSubmit()        │
 │     └─ BUTTON: element.click()                                   │
-│                                                                   │
-│  D. trackEvent("TOOL_SUCCESS")     ← We log what worked         │
-│     — or —                                                        │
-│     trackEvent("TOOL_ERROR")       ← We log what broke          │
-│                                                                   │
-└───────────────────────────────────────────────────────────────────┘
+│                                                                  │
+│  D. trackEvent("TOOL_SUCCESS")     ← We log what worked          │
+│     — or —                                                       │
+│     trackEvent("TOOL_ERROR")       ← We log what broke           │
+│                                                                  │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
 > **Why is this valuable?** The telemetry data (`TOOL_ATTEMPT`, `TOOL_SUCCESS`, `TOOL_ERROR`) is what we sell. Customers can see which tools AI agents are calling, which sites get the most AI traffic, which tools are failing, and how long interactions take. This is the "Stripe metrics dashboard" for AI agent activity.
@@ -745,7 +745,7 @@ AXO Score = (Tools Registered × 20) + (Tools Succeeded × 40) + (Annotations Co
 ║  ❌ Tools Failed:         3 (13%)                        ║
 ║  ⏭️ Tools Skipped:        1 (destructive, user-denied)   ║
 ║                                                          ║
-║  🎯 Annotation Accuracy: 21/23 (91%)                    ║
+║  🎯 Annotation Accuracy: 21/23 (91%)                     ║
 ║     ⚠️ clear_cart: missing destructiveHint               ║
 ║     ⚠️ export_data: missing readOnlyHint                 ║
 ║                                                          ║
