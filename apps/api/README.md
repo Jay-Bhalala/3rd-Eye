@@ -146,6 +146,7 @@ Generate AI-enhanced WebMCP tool schemas from scanned DOM elements.
 | 500 | OpenAI API error | Falls back to local |
 | Timeout (15s) | Slow AI response | Falls back to local |
 | Network error | Server unreachable | Falls back to local |
+| N/A (not called) | All elements have `data-tool-name` + `data-tool-description` | SDK skips API entirely |
 
 ---
 

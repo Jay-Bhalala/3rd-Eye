@@ -91,7 +91,22 @@ document.body.appendChild(Object.assign(document.createElement('button'), {
 
 **Expected:** The generated schema will have `annotations.destructiveHint: true`. When an AI agent calls this tool, the SDK will trigger a browser confirmation dialog via `requestUserInteraction`.
 
-### 4. SPA Navigation
+### 4. Declarative Overrides — Verify Override Schemas
+
+The test page includes 3 declarative override examples built-in. After SDK init, verify:
+
+```js
+// Should include "submit_feedback" (from data-tool-name on feedback form)
+// Should include "open_support_chat" (from data-tool-name on a <div>)
+ThirdEye.getSchemas().map(s => s.name)
+
+// Admin button should NOT appear (has data-tool-ignore)
+ThirdEye.getSchemas().find(s => s.name === 'admin_panel')  // → undefined
+```
+
+**Expected:** `submit_feedback` has `openWorldHint: true` (from `data-tool-open-world`). `open_support_chat` has `readOnlyHint: true` (from `data-tool-readonly`).
+
+### 5. SPA Navigation
 
 ```js
 // Simulate SPA route change
@@ -105,7 +120,7 @@ window.dispatchEvent(new PopStateEvent('popstate'))
 [3rdEye] 🔄 DOM mutation: ...
 ```
 
-### 5. SDK Destroy
+### 6. SDK Destroy
 
 ```js
 ThirdEye.destroy()
@@ -120,7 +135,7 @@ ThirdEye.destroy()
 [3rdEye] 💀 SDK destroyed
 ```
 
-### 6. Clear Schema Cache
+### 7. Clear Schema Cache
 
 ```js
 localStorage.clear()  // Clear cached AI schemas
@@ -153,6 +168,9 @@ ThirdEye.getSchemas()[0].annotations
 | Add to Cart | `<button>` | `add-to-cart` | `aria-label="Add to Cart"` | `idempotentHint: true` |
 | Subscribe | `<button>` | `subscribe-btn` | `aria-label="Subscribe to Newsletter"` | `openWorldHint: true` |
 | Dark Mode | `<button>` | `dark-mode-toggle` | `aria-label="Toggle Dark Mode"` | `idempotentHint: true` |
+| **Feedback form** | `<form>` | `feedback-form` | `data-tool-name="submit_feedback"` + 2 inputs with `data-tool-param` | `openWorldHint: true` (override) |
+| **Support chat** | `<div>` | `chat-widget` | `data-tool-name="open_support_chat"` (non-standard element) | `readOnlyHint: true` (override) |
+| **Admin button** | `<button>` | `admin-btn` | `data-tool-ignore` — **excluded from scanning** | N/A |
 
 ---
 

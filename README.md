@@ -105,9 +105,12 @@ Stage 6              Stage 7              Stage 8                           │
 
 **Stage 1 — Feature Detection:** Checks if `navigator.modelContext` exists (Chrome Canary with `chrome://flags/#web-mcp`). If it doesn't exist, the SDK logs a warning and continues — scanning and schema generation still run, but tool registration gracefully skips.
 
-**Stage 2 — DOM Scanning** (`scanner.ts`): Walks the entire DOM looking for:
+**Stage 2 — DOM Scanning** (`scanner.ts`): Walks the entire DOM in three passes:
 - **Forms:** Captures `id`, `action`, `method`, and all `<input>`/`<select>`/`<textarea>` within (including their `name`, `type`, `required`, `placeholder`, and associated `<label>` text)
 - **Buttons:** Finds `<button>`, `[role="button"]`, etc. with `aria-label` or descriptive IDs. Skips buttons inside forms (those are captured with the form).
+- **Annotated elements:** Finds any non-standard element (`<div>`, `<span>`, `<a>`, etc.) with a `data-tool-name` attribute — treated as click-to-execute tools.
+
+All three passes honour `data-tool-ignore` (excluded) and `data-tool-*` declarative overrides for names, descriptions, and annotations. See [Declarative Overrides](#declarative-overrides-data-tool-attributes) below.
 
 **Stage 3 — Schema Generation** (`schema.ts`): Converts each scanned element into a WebMCP-compatible tool definition with **W3C annotations**. Uses a two-tier strategy:
 - **AI-first** (via GPT-4o-mini): Generates semantic names (`search_products`) and safety annotations (`readOnlyHint: true`)
@@ -159,7 +162,7 @@ packages/sdk/src/
 ├── types.ts        # All interfaces: ToolSchema, ToolAnnotations, ModelContextAPI, etc.
 ├── logger.ts       # [3rdEye] prefixed, debug-aware console logger
 ├── telemetry.ts    # Fire-and-forget sendBeacon tracking
-├── scanner.ts      # DOM auto-scanner (forms + buttons)
+├── scanner.ts      # DOM auto-scanner (forms + buttons + annotated elements)
 ├── schema.ts       # ScannedElement[] → ToolSchema[] (API-first, local fallback, annotations)
 ├── registrar.ts    # WebMCP registration + execute wrapper + unregister + user confirmation
 ├── watcher.ts      # MutationObserver + SPA navigation + debounced re-scan
@@ -212,11 +215,70 @@ The SDK will call `POST /api/v1/generate-schema` on load. If the API is unreacha
 |----------|---------------|-------------------|-------------|
 | API + OpenAI key | `"ai"` | `search_products` | AI-inferred |
 | API, no key | `"local"` | `search_form` | Rule-based |
+| All elements have `data-tool-*` overrides | `"local"` (API skipped) | `submit_feedback` | Developer-provided |
 | No API | `"local"` (fallback) | `search_form` | Rule-based |
+
+> **Note:** If every scanned element has both `data-tool-name` and `data-tool-description`, the SDK skips the API call entirely — zero latency, zero cost.
 
 > **Cost:** GPT-4o-mini costs ~$0.00015 per schema generation request. Results are cached in `localStorage` for 5 minutes.
 
 > **Full API documentation:** See [`apps/api/README.md`](apps/api/README.md)
+
+---
+
+## Declarative Overrides (`data-tool-*` Attributes)
+
+Developers can annotate any HTML element with `data-tool-*` attributes to override auto-generated schema values, control annotations, or register non-standard elements (like `<div>` and `<span>`) as tools.
+
+### Supported Attributes
+
+| Attribute | Applies To | Description |
+|-----------|-----------|-------------|
+| `data-tool-name` | Any element | Override the generated tool name (e.g. `"submit_feedback"`) |
+| `data-tool-description` | Any element | Override the generated description |
+| `data-tool-readonly` | Any element | Set `readOnlyHint: true` |
+| `data-tool-destructive` | Any element | Set `destructiveHint: true` |
+| `data-tool-idempotent` | Any element | Set `idempotentHint: true` |
+| `data-tool-open-world` | Any element | Set `openWorldHint: true` |
+| `data-tool-param` | `<input>`, `<select>`, `<textarea>` | Override the parameter description for this field |
+| `data-tool-ignore` | Any element | Exclude this element from scanning entirely |
+
+### Examples
+
+**Override a form's tool name + annotations:**
+```html
+<form id="feedback-form" action="/api/feedback" method="POST"
+  data-tool-name="submit_feedback"
+  data-tool-description="Submit user feedback about the product"
+  data-tool-open-world>
+  <input name="message" data-tool-param="The feedback message content" required>
+  <button type="submit">Send</button>
+</form>
+```
+
+**Register a non-standard element (`<div>`) as a tool:**
+```html
+<div id="chat-widget"
+  data-tool-name="open_support_chat"
+  data-tool-description="Open the live support chat widget"
+  data-tool-readonly
+  onclick="openChat()">
+  💬 Need help? Click here.
+</div>
+```
+
+**Exclude an element from scanning:**
+```html
+<button id="admin-btn" data-tool-ignore>🔒 Admin Panel</button>
+```
+
+### How It Works
+
+1. The scanner reads `data-tool-*` attributes on every element it encounters
+2. Declarative values **override** auto-generated or AI-inferred values (name, description, annotations)
+3. Elements with `data-tool-ignore` are skipped entirely
+4. Non-standard elements (anything not `<form>`, `<button>`, `[role="button"]`) are picked up by a dedicated `scanAnnotated()` pass if they have `data-tool-name`
+5. If **all** elements have both `data-tool-name` and `data-tool-description`, the API call is skipped entirely
 
 ---
 
@@ -336,9 +398,15 @@ pnpm --filter @3rdeye/sdk build   # Build just the SDK
 
 ## Next Steps to Get to SDK v2.0
 
-### 1. Is this how WebMCP is *meant* to be used?
+To evolve 3rd Eye from a promising POC (v1.0) to a robust, production-ready SDK (v2.0), we need to address the key limitations identified in real-world testing and feedback. This includes enhancing compatibility with modern web frameworks, improving performance and scalability, adding developer-friendly customizations, bolstering security/governance, and expanding testing/integration options.
 
-**Partly yes, partly no.** The W3C spec envisions two primary ways to register tools:
+The goal for v2.0 is to make the SDK **"drop-in ready" for 80% of websites** (including SPAs and enterprise apps) while maintaining the zero-config appeal.
+
+We'll prioritize features based on impact: Start with core scanner/registration upgrades, then performance optimizations, followed by advanced features and integrations. Estimated timeline: **1-3 months** for a small team, assuming iterative releases (e.g., v1.1 for quick wins like declarative attrs).
+
+---
+
+### Where We Are Now vs. Where WebMCP Expects Us
 
 **The "normal" way (without 3rd Eye):**
 ```js
@@ -355,20 +423,9 @@ navigator.modelContext.registerTool({
 });
 ```
 
-This is what Chrome expects. The developer **knows** their own website, writes the schema by hand, and the `execute` callback calls their actual API — not DOM manipulation. There's zero delay because there's no AI involved.
+The developer **knows** their own website, writes schemas by hand, and the `execute` callback calls their actual API — not DOM manipulation. Zero delay, no AI involved.
 
-**What 3rd Eye does differently:** We *automate* this entire process for sites that don't want to write it themselves. Our SDK reverse-engineers the tools from the DOM and uses DOM manipulation (filling inputs, clicking buttons) as the execute strategy instead of direct API calls. This is a clever shortcut but it's also a tradeoff.
-
-**The delay concern is real.** The ~8-9 second AI schema generation is only acceptable because:
-- It happens once per page load (then cached for 5 min)
-- The local fallback is instant (tools register in <100ms)
-- Registration happens in the background — the page isn't blocked
-
-For production, you'd want **pre-computed schemas** stored server-side (generate once, serve forever), not generating on every page load. The current flow is fine for demos but wouldn't scale.
-
-### 2. Without 3rd Eye, would setup be much different?
-
-**Yes, significantly.** Here's the gap 3rd Eye fills:
+**What 3rd Eye does differently:** We automate this entire process. Our SDK reverse-engineers tools from the DOM and uses DOM manipulation (filling inputs, clicking buttons) as the execute strategy instead of direct API calls. This is a clever shortcut but also a tradeoff.
 
 | Aspect | Without 3rd Eye | With 3rd Eye |
 |--------|----------------|-------------|
@@ -378,44 +435,377 @@ For production, you'd want **pre-computed schemas** stored server-side (generate
 | **Maintenance** | Developer updates schemas when UI changes | MutationObserver handles it automatically |
 | **Time to integrate** | Hours per tool | One `<script>` tag |
 
-The "without 3rd Eye" approach is **better quality** (direct API calls > DOM manipulation) but **way more work**. 3rd Eye's value prop is: "drop in one script tag and every form/button on your site becomes an AI tool instantly."
+The "without 3rd Eye" approach is **better quality** (direct API calls > DOM manipulation) but **way more work**. Our value prop: "drop in one script tag and every form/button on your site becomes an AI tool instantly."
 
-### 3. Would this work on real, complex websites?
+---
 
-**Honestly? It would work partially, but there are real limitations.** Here's where it would struggle:
+### Current Limitations (Honest Assessment)
 
-#### ❌ Things that would break or be incomplete:
+| Limitation | Impact | v2 Fix |
+|-----------|--------|--------|
+| Only scans `<form>` + `<button>` — misses `<div onClick>` and custom components | Misses ~70% of modern SPA actions | Enhanced element detection + framework adapters |
+| `querySelectorAll` can't see shadow roots (Web Components) | Sites using Lit/Stencil/LWC partially invisible | Shadow DOM piercing |
+| AI schema gen takes ~8-9s per page load | Too slow for production | Pre-computed schemas via CLI/build plugin |
+| DOM manipulation is brittle (breaks on CSRF, JS validation) | Execute fails on secured forms | Direct API execution mode |
+| `popstate`/`hashchange` miss some SPA routers | React Router/Next.js transitions missed | `history.pushState` monkey-patching |
+| Only handles standard `<input>` — not date pickers, rich editors | Complex UIs partially broken | Custom input handlers |
+| Multi-step wizards only expose current step | Checkout flows incomplete | Flow grouping + watcher-based step detection |
 
-- **React/Vue/Angular SPAs**: Our scanner finds `<form>` and `<button>` elements, but many modern SPAs use `<div onClick={...}>` or custom components that don't use standard HTML form elements. The scanner would miss these entirely.
+---
 
-- **Shadow DOM** (Web Components): Our `document.querySelectorAll` can't see into shadow roots. Sites using Lit, Stencil, or Salesforce Lightning would be partially invisible.
+### Prioritized v2 Roadmap
 
-- **Client-side routing with virtual DOM**: React Router, Next.js App Router etc. — the `popstate`/`hashchange` listeners work for basic SPAs, but frameworks that use `history.pushState` without firing `popstate` would be missed.
+#### 1. ~~Hybrid Approach with Declarative HTML Attributes~~ ✅ SHIPPED (v1.1)
 
-- **Multi-step forms / wizards**: Our scanner sees the current state of the DOM. A 3-step checkout wizard would only expose Step 1's fields unless the user navigates through it.
+> Already implemented by @smahendra14 — see [Declarative Overrides](#declarative-overrides-data-tool-attributes) above.
 
-- **Auth-protected actions**: The `requestSubmit()` approach fills visible inputs, but if a form requires a CSRF token or session cookie in a hidden field, it might work... or it might get rejected by the server.
+Supports `data-tool-name`, `data-tool-description`, `data-tool-readonly`, `data-tool-destructive`, `data-tool-idempotent`, `data-tool-open-world`, `data-tool-param`, `data-tool-ignore`, and `scanAnnotated()` for non-standard elements.
 
-- **Complex inputs**: Date pickers, rich text editors (Quill, TipTap), file upload dialogs, drag-and-drop interfaces — our `nativeInputValueSetter` trick only works on standard `<input>` elements.
+**Remaining work:** Add `data-tool-execute="api:/api/search"` for hybrid execute mode (see item 4).
 
-#### ✅ Where it would work well:
+---
 
-- Simple marketing sites, landing pages, blogs with search/contact forms
-- Documentation sites with search bars
-- Basic e-commerce product pages with "Add to Cart" buttons
-- Any page that uses standard HTML `<form>` elements
+#### 2. Enhanced Custom Element Detection for Modern Frameworks
 
-#### The honest summary:
+**Priority:** 🔴 High — v1.0 only scans standard HTML, missing ~70% of top sites.
 
-3rd Eye is a **great proof of concept** and a smart product idea. The architecture is solid for what it does. But to be truly "enterprise-grade" on complex real-world sites, you'd need:
+**Tasks:**
+- Extend `scanner.ts` to detect interactive elements via `[onClick]`, `[role="button"]`, `[aria-role="combobox"]`, and common patterns (e.g., `class="btn"` with JS handlers)
+- Use `MutationObserver` to inspect event listeners dynamically (e.g., via `getEventListeners` in dev mode)
+- Add framework-specific heuristics: For React, look for `data-reactid` or common component props; for Vue, vue-specific attrs
+- Integrate optional **framework adapters** (e.g., a React HOC or Vue plugin to expose components programmatically)
 
-1. **Custom element detection** — not just `<form>`/`<button>` but also `[onClick]`, `[role="button"]`, custom component registries
-2. **Shadow DOM piercing** — traverse into shadow roots
-3. **Pre-computed schemas** — generate once at build time, not on every page load
-4. **Direct API execution** — instead of DOM manipulation, let site owners provide their actual API endpoints as the execute strategy
-5. **A hybrid approach** — auto-detect what you can, let developers override/augment with declarative attributes like `<form toolname="search_products" tooldescription="...">`
+**Success Criteria:** Scanner identifies 90%+ of actions on cloned real-world sites like a Next.js e-commerce demo. Unit tests for SPA edge cases.
 
-That last point (declarative HTML attributes) was actually in our original gap list but we haven't implemented it yet. That's probably the most impactful next step for real-world adoption.
+---
+
+#### 3. Shadow DOM Piercing and Traversal
+
+**Priority:** 🟠 Medium-High — blocks Web Component compatibility (Salesforce, Stencil, etc.)
+
+**Tasks:**
+- In `scanner.ts` and `watcher.ts`, recursively traverse shadow roots using `element.shadowRoot` with a depth-limited walker (to avoid perf issues)
+- Handle `composed: true` for events bubbling out of shadows
+- Add config option `data-shadow-depth="3"` to limit recursion
+
+**Success Criteria:** Test on a LitElement demo — detects encapsulated forms/buttons. No perf regression (scan time <500ms).
+
+---
+
+#### 4. Direct API Execution as Optional Execute Strategy
+
+**Priority:** 🔴 High — fixes core brittleness of DOM manipulation.
+
+**Rationale:** DOM manipulation is brittle (breaks on JS validation, CSRF, complex inputs). Allowing site owners to map tools to real APIs makes executes deterministic and secure, aligning closer to WebMCP's intent.
+
+**Tasks:**
+- In `registrar.ts`, add execute modes: `"dom"` (default, v1.0 style) vs. `"api"` (fetch-based)
+- Allow declarative attrs like `data-tool-execute="api:/api/search?query={query}"` with placeholder interpolation
+- For auto-scanned elements, infer API from form `action`/`method` if possible; fallback to DOM
+- Handle auth: Pass user session headers (e.g., cookies) in API calls if permitted
+- Update telemetry to log execute mode and latency
+
+**Success Criteria:** On a test site with APIs, tools return JSON directly without DOM hacks. Error rates drop in e2e tests.
+
+---
+
+#### 5. Pre-Computed Schemas with Server-Side Generation
+
+**Priority:** 🔴 High — client-side AI gen causes ~8-9s delays, unacceptable for prod.
+
+**Tasks:**
+- Move schema gen to API/build time: Add a CLI tool (e.g., `pnpm 3rdeye:generate`) that scans a site's sitemap or crawls pages, generates schemas via AI, and stores in DB/Redis
+- SDK fetches pre-computed schemas via `GET /api/v1/schemas?siteId=abc&path=/products` (cached forever, invalidate on deploy)
+- Integrate with build tools: Plugins for Next.js/Vite to run gen during build
+- Deprecate client-side AI gen for prod; keep for dev/polyfill
+
+**Success Criteria:** Schema load <100ms. Multi-page site schemas persist across loads. Costs stay low with caching.
+
+---
+
+#### 6. Governance and Security Features
+
+**Priority:** 🟡 Medium — critical for paid enterprise users.
+
+**Rationale:** Agents with direct access raise risks (spam, PII leaks, unauthorized actions). v2.0 needs safeguards for enterprise trust.
+
+**Tasks:**
+- In `registrar.ts`, add agent auth: Optional `data-agent-key` to validate calls against site-configured keys
+- Enhance user confirmation: Customizable dialogs (e.g., via `data-confirm-msg`) and audit logs sent to telemetry
+- Privacy controls: Opt-out for PII fields (e.g., skip `[type="password"]`); comply with GDPR via consent prompts
+- Firewall integration: Basic WASM module in `services/firewall` to enforce rate limits/policies on execute
+- Telemetry anonymization: Hash sensitive args before logging
+
+**Success Criteria:** Pass basic security audit (e.g., no unauthorized executes). Beta users report "feels safe."
+
+---
+
+#### 7. Complex Inputs and Multi-Step Flows
+
+**Priority:** 🟡 Medium — limits e-commerce/finance use cases.
+
+**Tasks:**
+- In `scanner.ts`, detect advanced inputs (e.g., `[type="date"]`, `contenteditable`) and generate richer schemas (e.g., `enum` for selects)
+- For multi-step: Use watcher to re-scan on navigation; add "flow" grouping in schemas (e.g., tool chains like `step1_login → step2_pay`)
+- Support file uploads/drag-drop via custom execute handlers
+
+**Success Criteria:** Works on a 3-step form demo without manual navigation.
+
+---
+
+#### 8. Testing and Integration Suite
+
+**Priority:** 🟡 Medium — needed for credibility post-core features.
+
+**Tasks:**
+- Add e2e tests with Playwright in `testing/` (simulate agents calling tools)
+- Create framework integrations: Shopify app, WordPress plugin, Next.js middleware
+- Build swarm-engine prototype: Python sim to "attack" sites and report AXO scores (e.g., % tools succeeding)
+- Add CI/CD: Auto-test on PRs with Canary browser
+
+**Success Criteria:** 90% coverage; beta users via integrations (e.g., 10 Shopify installs).
+
+---
+
+#### 9. Performance Optimizations and Monitoring
+
+**Priority:** 🟢 Low-Medium — ensure SDK doesn't slow sites.
+
+**Tasks:**
+- Profile and optimize scan/watcher (e.g., throttle to 1s debounces)
+- Add perf telemetry: Track init time, schema gen latency
+- Bundle size goal: Keep <10KB gzipped
+
+**Success Criteria:** Lighthouse score impact <5%.
+
+---
+
+#### 10. Documentation, Dashboard Enhancements, and Launch Prep
+
+**Priority:** 🟢 Low — wrap-up before public beta.
+
+**Tasks:**
+- Update README/docs with v2.0 examples, migration guide
+- Flesh out dashboard: Visualize telemetry (charts for tool usage, failures); add alerts
+- Prep for X/Product Hunt: Demo videos, beta waitlist
+- OSS parts of SDK; keep API/dashboard proprietary
+
+**Success Criteria:** Ready for public beta; 50+ signups.
+
+---
+
+### Pricing Strategy (v2.0)
+
+Usage-based pricing modeled after PostHog/Datadog — charge on **events** (tool calls/telemetry) + **gens** (schema computes):
+
+| Tier | Price | Features | Limits | Target |
+|------|-------|----------|--------|--------|
+| **Free** | $0/mo | Local schemas (no AI), basic analytics (7-day retention, no exports), basic firewall (block known bots) | 10k events/mo, 500 gens/mo | Hobbyists, small sites |
+| **Pro** | $49/mo + $0.0001/event over 1M | AI schemas (pre-computed), full analytics (30-day retention, dashboards), advanced firewall (custom rules, budget caps), swarm (50 sims/mo) | Unlimited gens (fair-use), 1M events included | Startups, e-commerce |
+| **Enterprise** | $299+/mo (custom) | Everything + unlimited swarm, SSO, dedicated support, custom retention (90+ days), advanced integrations (Zapier alerts) | Unlimited, SLAs | Big SaaS, enterprise |
+
+**Key decisions:**
+- Free tier includes basic firewall to demo value; full custom rules in Pro
+- Free analytics = aggregate only (no breakdowns) → drives upgrade to Pro
+- Eat OpenAI costs on free tier (capped at 500 gens/mo) for conversion
+- Swarm starts in Pro (50 sims/mo) as QA hook
+- Target 20% free-to-paid conversion
+
+---
+
+### Data & Moat Strategy
+
+- **Hosted DB for moat** — don't edit `main.js`, serve dynamic config via API. Static JS edits = no recurring value (devs copy once, bye). Hosted analytics/firewall/swarm = control and lock-in.
+- **Dumb SDK** — the SDK should be a thin client that fetches configs from the API. OSS the SDK for virality, keep API/dashboard/swarm proprietary.
+- **Data retention:** Free = 7 days, Pro = 30 days, Enterprise = 90+ days
+- **Privacy:** GDPR-compliant — anonymize telemetry, get consent in TOS, hash sensitive args before logging
+- **Pre-computed schemas shift load:** Build-time gen → store in DB → SDK fetches via API (fast, cached forever, invalidate on deploy)
+
+> **Track progress in GitHub Issues/Projects.** Quick wins (items 2, 4, 5) first to enable early betas. If we hit these, v2.0 positions 3rd Eye as the go-to for agentic web.
+
+---
+
+## 🐝 Swarm Engine — Roadmap
+
+The Swarm Engine is a headless testing and QA tool that simulates AI agents interacting with your website via WebMCP. It's the **consumer** side of the equation — the SDK **registers** tools, the swarm **calls** them.
+
+> **Status:** Not yet implemented. This section outlines the planned architecture, phases, and integration strategy. Building swarms early lets us QA the SDK itself — every SDK v2 change can be validated automatically.
+
+The swarm acts as:
+1. **SDK QA tool** — validates scanner improvements, annotation accuracy, execute reliability
+2. **Customer-facing product** — "Test your site's AI readiness" (AXO score)
+3. **Schema pre-computation engine** — headless crawl → generate schemas → store in DB → SDK fetches (solves the 8-9s delay problem)
+
+### Architecture
+
+```
+services/swarm/
+├── crawler.ts        # Playwright-based site crawler
+├── executor.ts       # Calls registered tools with synthetic args
+├── scorer.ts         # Calculates AXO (Agent Experience Optimization) score
+├── reporter.ts       # Generates HTML/JSON reports
+├── scenarios/        # Predefined test flows (e.g., "buy_product", "create_account")
+│   ├── e-commerce.ts
+│   ├── auth.ts
+│   └── search.ts
+├── config.ts         # Target URLs, timeouts, concurrency
+└── index.ts          # CLI entrypoint: `pnpm swarm:run --url https://...`
+```
+
+**Tech Stack:**
+- **Playwright** — headless Chrome with WebMCP flags enabled
+- **TypeScript** — same as rest of monorepo
+- **Hono** (optional) — expose swarm as an API (`POST /api/v1/swarm/run`)
+
+### Phase 1 — Crawler (Find Tools)
+
+**Goal:** Visit a URL, wait for the SDK to register tools, and collect the tool list.
+
+```ts
+// Pseudocode
+const browser = await playwright.launch({
+  channel: 'chrome-canary',
+  args: ['--enable-features=WebMCP']
+});
+const page = await browser.newPage();
+await page.goto(targetUrl);
+await page.waitForFunction(() => window.ThirdEye?.isInitialized());
+
+const tools = await page.evaluate(() => ThirdEye.getSchemas());
+// → [{ name: "search_marketplace", description: "...", parameters: {...}, ... }]
+```
+
+**Deliverables:**
+- `crawler.ts` that visits any URL and returns `ToolSchema[]`
+- Handles SPAs (navigates all hash routes)
+- Reports which elements were scanned vs. missed (coverage %)
+- **Bonus:** Use crawler to pre-compute schemas and store in DB (merges with roadmap item 5)
+
+### Phase 2 — Executor (Call Tools)
+
+**Goal:** For each discovered tool, generate synthetic arguments and call it.
+
+```ts
+// For each tool:
+const args = generateSyntheticArgs(tool.parameters);
+// e.g., { q: "wireless headphones", category: "electronics" }
+
+const result = await page.evaluate(async (toolName, args) => {
+  const tool = navigator.modelContext?.getRegisteredTools?.()
+    ?.find(t => t.name === toolName);
+  if (!tool) return { status: 'NOT_FOUND' };
+  try {
+    const result = await tool.execute(args);
+    return { status: 'SUCCESS', result };
+  } catch (err) {
+    return { status: 'ERROR', error: err.message };
+  }
+}, tool.name, args);
+```
+
+**Synthetic Arg Generation:**
+- Use tool's JSON Schema to generate valid values
+- String fields → lorem ipsum, email patterns, etc.
+- Number fields → random within min/max
+- Enum fields → random valid option
+- Optional: Use GPT to generate contextually realistic args
+
+**Deliverables:**
+- `executor.ts` that calls each tool and records `SUCCESS | ERROR | TIMEOUT | USER_DENIED`
+- Handles destructive tools (auto-confirm or skip based on config)
+- Captures DOM state before/after execution (did anything change?)
+- Measures execution latency
+
+### Phase 3 — Scorer (AXO Score)
+
+**Goal:** Calculate an "Agent Experience Optimization" score for the site.
+
+```
+AXO Score = (Tools Registered × 20) + (Tools Succeeded × 40) + (Annotations Correct × 20) + (Coverage × 20)
+                         max 100 points
+```
+
+| Metric | Weight | How Measured |
+|--------|--------|-------------|
+| **Registration Rate** | 20% | `registered / total_interactive_elements` |
+| **Execution Success** | 40% | `succeeded / attempted` |
+| **Annotation Accuracy** | 20% | Do destructive tools have `destructiveHint`? Do read-only tools lack it? |
+| **Page Coverage** | 20% | `scanned_pages / total_pages` (for multi-page sites) |
+
+**Example report:**
+
+```
+╔══════════════════════════════════════════════════════════╗
+║  🐝 Swarm Report — NeonMart (http://localhost:8080)      ║
+╠══════════════════════════════════════════════════════════╣
+║  AXO Score: 82/100                                       ║
+║                                                          ║
+║  📊 Tools Found:         23                              ║
+║  ✅ Tools Succeeded:     19 (83%)                        ║
+║  ❌ Tools Failed:         3 (13%)                        ║
+║  ⏭️ Tools Skipped:        1 (destructive, user-denied)   ║
+║                                                          ║
+║  🎯 Annotation Accuracy: 21/23 (91%)                    ║
+║     ⚠️ clear_cart: missing destructiveHint               ║
+║     ⚠️ export_data: missing readOnlyHint                 ║
+║                                                          ║
+║  📄 Pages Crawled:       6/6 (100%)                      ║
+║  ⏱️ Avg Execute Time:    45ms                            ║
+║  📦 SDK Init Time:       1.2s                            ║
+╚══════════════════════════════════════════════════════════╝
+```
+
+### Swarm vs. SDK: Different Jobs
+
+| | SDK | Swarm |
+|--|-----|-------|
+| **Role** | *Registers* tools (producer) | *Calls* tools (consumer) |
+| **Runs on** | Client-side, user's browser | Server-side, headless Playwright |
+| **Who uses it** | Website owners | You (QA), paid customers (AXO scores) |
+| **Output** | Registered WebMCP tools | Test reports, AXO scores |
+| **Why both?** | SDK makes sites agent-ready | Swarm verifies they actually work |
+
+> **Should the swarm replace the SDK?** No. The swarm can't run in a user's browser — it's headless and server-side. The SDK must still run client-side to register tools with `navigator.modelContext`. However, the swarm can **pre-compute schemas** (crawl → generate → store in DB), which the SDK then fetches. This hybrid is the plan for roadmap items 5 and 8.
+
+### Integration with SDK v2 Development
+
+```
+1. Make SDK change (e.g., improve scanner)
+2. Build SDK:  pnpm --filter @3rdeye/sdk build
+3. Run swarm:  pnpm swarm:run --url http://localhost:8080
+4. Check AXO score — did it improve?
+5. If yes → commit. If no → debug.
+```
+
+The swarm becomes the **acceptance test** for every SDK PR.
+
+### Integration with Pricing
+
+| Tier | Swarm Access |
+|------|-------------|
+| **Free** | 5 swarm runs/mo (manual via CLI) |
+| **Pro** | 50 swarm runs/mo (API + dashboard) |
+| **Enterprise** | Unlimited + CI/CD integration + scheduled runs |
+
+### Implementation Timeline
+
+| Phase | Effort | Depends On |
+|-------|--------|-----------|
+| Phase 1 (Crawler) | ~1 week | Advanced test site ✅ |
+| Phase 2 (Executor) | ~2 weeks | Phase 1 |
+| Phase 3 (Scorer) | ~1 week | Phase 2 |
+| Dashboard integration | ~2 weeks | Phase 3 + dashboard |
+
+> **Start with Phase 1** — even a basic crawler that reports tool counts is immediately useful for SDK QA.
+
+---
+
+## Test Environments
+
+| Environment | Location | Purpose |
+|-------------|----------|---------|
+| **Simple Demo** | [`testing/sdk-demo/`](testing/sdk-demo/) | Basic forms + buttons for quick SDK verification |
+| **Advanced Demo (NeonMart)** | [`testing/advanced-demo/`](testing/advanced-demo/) | Realistic e-commerce SPA for stress-testing all SDK features |
 
 ---
 

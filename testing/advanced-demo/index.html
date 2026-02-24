@@ -1,0 +1,1258 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="NeonMart — AI-powered online marketplace for electronics, fashion, and more.">
+    <title>NeonMart — AI Shopping Demo</title>
+    <style>
+        /* ── Reset ─────────────────────────────────────────────────────────── */
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --bg: #0b0e11;
+            --surface: #141920;
+            --surface-alt: #1a2030;
+            --border: #2a3040;
+            --text: #e8ecf0;
+            --muted: #7a8599;
+            --accent: #6c5ce7;
+            --accent-hover: #5a4bd1;
+            --success: #00b894;
+            --danger: #ff6b6b;
+            --warning: #fdcb6e;
+            --radius: 12px;
+            --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            font-family: var(--font);
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.5;
+        }
+
+        /* ── Layout ────────────────────────────────────────────────────────── */
+        .app {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 240px;
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            padding: 1.5rem 0;
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            overflow-y: auto;
+        }
+
+        .sidebar .logo {
+            padding: 0 1.5rem;
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 2rem;
+            color: var(--accent);
+        }
+
+        .sidebar nav a {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1.5rem;
+            color: var(--muted);
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.15s;
+            border-left: 3px solid transparent;
+            cursor: pointer;
+        }
+
+        .sidebar nav a:hover,
+        .sidebar nav a.active {
+            color: var(--text);
+            background: var(--surface-alt);
+            border-left-color: var(--accent);
+        }
+
+        .main {
+            margin-left: 240px;
+            flex: 1;
+        }
+
+        .topbar {
+            height: 60px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .topbar .search-bar {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .topbar .search-bar input {
+            width: 320px;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--bg);
+            color: var(--text);
+            font-size: 0.9rem;
+        }
+
+        .topbar .user-actions {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+        }
+
+        .content {
+            padding: 2rem;
+        }
+
+        /* ── Page sections ─────────────────────────────────────────────────── */
+        .page {
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        /* ── Cards ─────────────────────────────────────────────────────────── */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .card-img {
+            width: 100%;
+            height: 180px;
+            background: var(--surface-alt);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+        }
+
+        .card-body {
+            padding: 1rem;
+        }
+
+        .card-title {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .card-price {
+            color: var(--success);
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+
+        .card-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+        }
+
+        /* ── Buttons ───────────────────────────────────────────────────────── */
+        button,
+        .btn {
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.15s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: #fff;
+        }
+
+        .btn-danger:hover {
+            background: #e55;
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--muted);
+            border: 1px solid var(--border);
+        }
+
+        .btn-ghost:hover {
+            color: var(--text);
+            border-color: var(--text);
+        }
+
+        .btn-sm {
+            padding: 0.35rem 0.7rem;
+            font-size: 0.8rem;
+        }
+
+        /* ── Forms ─────────────────────────────────────────────────────────── */
+        .form-panel {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            max-width: 500px;
+        }
+
+        .form-panel h3 {
+            margin-bottom: 1rem;
+        }
+
+        label {
+            display: block;
+            font-size: 0.8rem;
+            color: var(--muted);
+            margin-bottom: 0.3rem;
+        }
+
+        input,
+        select,
+        textarea {
+            width: 100%;
+            padding: 0.55rem 0.75rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--bg);
+            color: var(--text);
+            font-size: 0.9rem;
+            margin-bottom: 0.85rem;
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .form-row {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .form-row>* {
+            flex: 1;
+        }
+
+        /* ── Modal ─────────────────────────────────────────────────────────── */
+        .modal-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 500;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-backdrop.open {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 2rem;
+            width: 90%;
+            max-width: 480px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal h3 {
+            margin-bottom: 1rem;
+        }
+
+        /* ── Toast ─────────────────────────────────────────────────────────── */
+        .toast-container {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .toast {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            font-size: 0.85rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            animation: slideIn 0.3s ease;
+            min-width: 250px;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* ── Tabs ──────────────────────────────────────────────────────────── */
+        .tabs {
+            display: flex;
+            gap: 0;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 1.5rem;
+        }
+
+        .tab {
+            padding: 0.75rem 1.25rem;
+            cursor: pointer;
+            color: var(--muted);
+            font-size: 0.9rem;
+            border-bottom: 2px solid transparent;
+            transition: all 0.15s;
+        }
+
+        .tab:hover {
+            color: var(--text);
+        }
+
+        .tab.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+
+        /* ── Badge ─────────────────────────────────────────────────────────── */
+        .badge {
+            background: var(--danger);
+            color: #fff;
+            font-size: 0.65rem;
+            padding: 0.1rem 0.4rem;
+            border-radius: 50px;
+            font-weight: 700;
+        }
+
+        /* ── Checkout steps ────────────────────────────────────────────────── */
+        .steps {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .step {
+            flex: 1;
+            text-align: center;
+            padding: 0.75rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            background: var(--surface-alt);
+            color: var(--muted);
+            border: 1px solid var(--border);
+        }
+
+        .step.active {
+            background: var(--accent);
+            color: #fff;
+            border-color: var(--accent);
+        }
+
+        .step.done {
+            background: var(--success);
+            color: #fff;
+            border-color: var(--success);
+        }
+
+        .checkout-panel {
+            display: none;
+        }
+
+        .checkout-panel.active {
+            display: block;
+        }
+
+        /* ── Toggle switch ────────────────────────────────────────────────── */
+        .toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .toggle input[type="checkbox"] {
+            width: auto;
+            margin: 0;
+            accent-color: var(--accent);
+            transform: scale(1.3);
+        }
+
+        /* ── Section headers ──────────────────────────────────────────────── */
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .section-header h2 {
+            font-size: 1.4rem;
+        }
+
+        /* ── Cart table ────────────────────────────────────────────────────── */
+        .cart-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .cart-table th,
+        .cart-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .cart-table th {
+            color: var(--muted);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+        }
+
+        /* ── Debug panel ───────────────────────────────────────────────────── */
+        .debug-panel {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 2rem;
+            font-family: 'SF Mono', 'Consolas', monospace;
+            font-size: 0.8rem;
+            color: #8b949e;
+        }
+
+        .debug-panel code {
+            color: #79c0ff;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app">
+
+        <!-- ═══════════════════════════════════════════════════════════════════ -->
+        <!-- SIDEBAR NAVIGATION (SPA router)                                    -->
+        <!-- ═══════════════════════════════════════════════════════════════════ -->
+        <aside class="sidebar">
+            <div class="logo">🛒 NeonMart</div>
+            <nav>
+                <a href="#shop" class="nav-link active" data-page="shop">🏪 Shop</a>
+                <a href="#cart" class="nav-link" data-page="cart">🛒 Cart <span class="badge"
+                        id="cart-count">0</span></a>
+                <a href="#account" class="nav-link" data-page="account">👤 Account</a>
+                <a href="#checkout" class="nav-link" data-page="checkout">💳 Checkout</a>
+                <a href="#settings" class="nav-link" data-page="settings">⚙️ Settings</a>
+                <a href="#admin" class="nav-link" data-page="admin">🔒 Admin</a>
+            </nav>
+
+            <!-- Non-standard interactive element: div with data-tool-name -->
+            <div style="padding: 1.5rem; margin-top: auto; border-top: 1px solid var(--border);">
+                <div id="live-support" data-tool-name="open_live_support"
+                    data-tool-description="Open a live chat with customer support" data-tool-readonly
+                    onclick="showToast('💬 Support chat opened!')"
+                    style="cursor: pointer; padding: 0.75rem; background: var(--surface-alt); border-radius: 8px; text-align: center; font-size: 0.85rem;">
+                    💬 Live Support
+                </div>
+            </div>
+        </aside>
+
+        <div class="main">
+
+            <!-- ═══════════════════════════════════════════════════════════════ -->
+            <!-- TOP BAR — Global search + user actions                         -->
+            <!-- ═══════════════════════════════════════════════════════════════ -->
+            <header class="topbar">
+                <form id="global-search" action="/search" method="GET" data-tool-name="search_marketplace"
+                    data-tool-description="Search for products across the entire NeonMart marketplace"
+                    data-tool-readonly onsubmit="event.preventDefault(); showToast('🔍 Searched: ' + this.q.value);">
+                    <div class="search-bar">
+                        <input type="text" name="q" placeholder="Search products, brands, categories..."
+                            data-tool-param="Search query string" required aria-label="Search products">
+                        <button type="submit" class="btn-primary btn-sm">Search</button>
+                    </div>
+                </form>
+                <div class="user-actions">
+                    <button id="notif-btn" class="btn-ghost btn-sm" aria-label="View Notifications"
+                        onclick="showToast('🔔 No new notifications')">🔔</button>
+                    <button id="wishlist-btn" class="btn-ghost btn-sm" aria-label="View Wishlist"
+                        onclick="navigate('cart')">❤️</button>
+                    <!-- Non-standard: span acting as a button -->
+                    <span id="user-avatar" data-tool-name="open_user_menu"
+                        data-tool-description="Open the user account dropdown menu"
+                        onclick="showToast('👤 User menu opened')"
+                        style="cursor: pointer; width: 32px; height: 32px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 700;">
+                        JB
+                    </span>
+                </div>
+            </header>
+
+            <div class="content">
+
+                <!-- ═════════════════════════════════════════════════════════════ -->
+                <!-- PAGE: SHOP (Product Catalog)                                 -->
+                <!-- ═════════════════════════════════════════════════════════════ -->
+                <div id="page-shop" class="page active">
+                    <div class="section-header">
+                        <h2>🏪 Shop</h2>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <select id="sort-select" aria-label="Sort products" data-tool-name="sort_products"
+                                data-tool-description="Change the product sort order"
+                                onchange="showToast('Sorted by: ' + this.value)">
+                                <option value="newest">Newest</option>
+                                <option value="price-low">Price: Low → High</option>
+                                <option value="price-high">Price: High → Low</option>
+                                <option value="rating">Top Rated</option>
+                            </select>
+                            <button id="filter-toggle" class="btn-ghost btn-sm" aria-label="Toggle Filters"
+                                data-tool-idempotent
+                                onclick="document.getElementById('filters-panel').classList.toggle('open'); showToast('Filters toggled')">
+                                🎛️ Filters
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Filter sidebar (toggleable) -->
+                    <div id="filters-panel" style="display: none; margin-bottom: 1.5rem;">
+                        <form id="filter-form" data-tool-name="apply_product_filters"
+                            data-tool-description="Filter products by category, price range, and rating"
+                            data-tool-readonly onsubmit="event.preventDefault(); showToast('Filters applied!');">
+                            <div class="form-row">
+                                <div>
+                                    <label for="filter-category">Category</label>
+                                    <select id="filter-category" name="category"
+                                        data-tool-param="Product category to filter by">
+                                        <option value="">All</option>
+                                        <option value="electronics">Electronics</option>
+                                        <option value="fashion">Fashion</option>
+                                        <option value="home">Home & Garden</option>
+                                        <option value="sports">Sports</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="filter-min-price">Min Price ($)</label>
+                                    <input type="number" id="filter-min-price" name="minPrice" placeholder="0"
+                                        data-tool-param="Minimum price in dollars">
+                                </div>
+                                <div>
+                                    <label for="filter-max-price">Max Price ($)</label>
+                                    <input type="number" id="filter-max-price" name="maxPrice" placeholder="999"
+                                        data-tool-param="Maximum price in dollars">
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+                                <button type="submit" class="btn-primary btn-sm">Apply Filters</button>
+                                <button type="reset" class="btn-ghost btn-sm"
+                                    onclick="showToast('Filters cleared')">Clear</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Product grid -->
+                    <div class="grid" id="product-grid"></div>
+                </div>
+
+                <!-- ═════════════════════════════════════════════════════════════ -->
+                <!-- PAGE: CART                                                   -->
+                <!-- ═════════════════════════════════════════════════════════════ -->
+                <div id="page-cart" class="page">
+                    <h2 style="margin-bottom: 1.5rem;">🛒 Shopping Cart</h2>
+                    <table class="cart-table">
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th>Price</th>
+                                <th>Qty</th>
+                                <th>Total</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="cart-items">
+                            <tr>
+                                <td colspan="5" style="text-align: center; color: var(--muted); padding: 2rem;">Cart is
+                                    empty</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div style="display: flex; justify-content: space-between; margin-top: 1.5rem;">
+                        <div>
+                            <form id="coupon-form" action="/api/coupon" method="POST" data-tool-name="apply_coupon_code"
+                                data-tool-description="Apply a promotional coupon code to the shopping cart"
+                                onsubmit="event.preventDefault(); showToast('🎟️ Coupon applied: ' + this.coupon.value);">
+                                <div style="display: flex; gap: 0.5rem;">
+                                    <input type="text" name="coupon" placeholder="Enter coupon code"
+                                        data-tool-param="The promotional coupon code" style="width: 200px;">
+                                    <button type="submit" class="btn-ghost btn-sm">Apply</button>
+                                </div>
+                            </form>
+                        </div>
+                        <div>
+                            <button id="clear-cart-btn" class="btn-danger btn-sm" aria-label="Clear Cart"
+                                data-tool-destructive onclick="clearCart(); showToast('🗑️ Cart cleared')">🗑️ Clear
+                                Cart</button>
+                            <button id="checkout-btn" class="btn-primary" aria-label="Proceed to Checkout"
+                                onclick="navigate('checkout')">💳 Checkout</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ═════════════════════════════════════════════════════════════ -->
+                <!-- PAGE: ACCOUNT (Auth — login/register/profile)                -->
+                <!-- ═════════════════════════════════════════════════════════════ -->
+                <div id="page-account" class="page">
+                    <h2 style="margin-bottom: 1.5rem;">👤 Account</h2>
+
+                    <div class="tabs">
+                        <div class="tab active" onclick="switchTab(this, 'tab-login')">Login</div>
+                        <div class="tab" onclick="switchTab(this, 'tab-register')">Register</div>
+                        <div class="tab" onclick="switchTab(this, 'tab-profile')">Profile</div>
+                    </div>
+
+                    <!-- Login tab -->
+                    <div id="tab-login" class="tab-panel" style="display: block;">
+                        <div class="form-panel">
+                            <h3>Sign In</h3>
+                            <form id="login-form" action="/api/auth/login" method="POST" data-tool-name="user_login"
+                                data-tool-description="Log in to NeonMart with email and password" data-tool-open-world
+                                onsubmit="event.preventDefault(); showToast('✅ Logged in as ' + this.email.value);">
+                                <label for="login-email">Email</label>
+                                <input type="email" id="login-email" name="email" placeholder="you@example.com"
+                                    data-tool-param="User's email address" required>
+                                <label for="login-password">Password</label>
+                                <input type="password" id="login-password" name="password" placeholder="••••••••"
+                                    required>
+                                <div class="toggle">
+                                    <input type="checkbox" id="remember-me" name="rememberMe">
+                                    <label for="remember-me" style="margin-bottom: 0;">Remember me</label>
+                                </div>
+                                <button type="submit" class="btn-primary">Sign In</button>
+                                <a href="#" onclick="event.preventDefault(); showModal('forgot-pw-modal')"
+                                    style="font-size: 0.8rem; color: var(--accent); margin-left: 1rem;">Forgot
+                                    password?</a>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Register tab -->
+                    <div id="tab-register" class="tab-panel" style="display: none;">
+                        <div class="form-panel">
+                            <h3>Create Account</h3>
+                            <form id="register-form" action="/api/auth/register" method="POST"
+                                data-tool-name="create_account" data-tool-description="Register a new NeonMart account"
+                                data-tool-open-world
+                                onsubmit="event.preventDefault(); showToast('🎉 Account created for ' + this.regEmail.value);">
+                                <div class="form-row">
+                                    <div>
+                                        <label for="reg-first">First Name</label>
+                                        <input type="text" id="reg-first" name="firstName" placeholder="Jane"
+                                            data-tool-param="User's first name" required>
+                                    </div>
+                                    <div>
+                                        <label for="reg-last">Last Name</label>
+                                        <input type="text" id="reg-last" name="lastName" placeholder="Doe"
+                                            data-tool-param="User's last name" required>
+                                    </div>
+                                </div>
+                                <label for="reg-email">Email</label>
+                                <input type="email" id="reg-email" name="regEmail" placeholder="you@example.com"
+                                    data-tool-param="Email for the new account" required>
+                                <label for="reg-pw">Password</label>
+                                <input type="password" id="reg-pw" name="regPassword"
+                                    placeholder="At least 8 characters" required>
+                                <label for="reg-pw2">Confirm Password</label>
+                                <input type="password" id="reg-pw2" name="regPasswordConfirm"
+                                    placeholder="Re-enter your password" required>
+                                <button type="submit" class="btn-primary">Create Account</button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Profile tab -->
+                    <div id="tab-profile" class="tab-panel" style="display: none;">
+                        <div class="form-panel">
+                            <h3>Edit Profile</h3>
+                            <form id="profile-form" action="/api/user/profile" method="PUT"
+                                data-tool-name="update_profile"
+                                data-tool-description="Update the user's profile information" data-tool-open-world
+                                onsubmit="event.preventDefault(); showToast('✅ Profile updated');">
+                                <label for="profile-name">Display Name</label>
+                                <input type="text" id="profile-name" name="displayName" value="Jay B"
+                                    data-tool-param="The user's display name">
+                                <label for="profile-bio">Bio</label>
+                                <textarea id="profile-bio" name="bio" rows="3" placeholder="Tell us about yourself..."
+                                    data-tool-param="A short biography">Electronics enthusiast & early adopter</textarea>
+                                <label for="profile-avatar">Avatar URL</label>
+                                <input type="url" id="profile-avatar" name="avatarUrl" placeholder="https://..."
+                                    data-tool-param="URL to the user's avatar image">
+                                <div style="display: flex; gap: 0.5rem;">
+                                    <button type="submit" class="btn-primary">Save Changes</button>
+                                    <button type="button" class="btn-danger btn-sm" aria-label="Delete Account"
+                                        data-tool-destructive
+                                        onclick="if(confirm('Are you sure?')) showToast('💀 Account deleted')">
+                                        Delete Account
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ═════════════════════════════════════════════════════════════ -->
+                <!-- PAGE: CHECKOUT (Multi-step wizard)                           -->
+                <!-- ═════════════════════════════════════════════════════════════ -->
+                <div id="page-checkout" class="page">
+                    <h2 style="margin-bottom: 1rem;">💳 Checkout</h2>
+
+                    <div class="steps">
+                        <div class="step active" id="step-1-indicator">1. Shipping</div>
+                        <div class="step" id="step-2-indicator">2. Payment</div>
+                        <div class="step" id="step-3-indicator">3. Review</div>
+                    </div>
+
+                    <!-- Step 1: Shipping -->
+                    <div id="checkout-step-1" class="checkout-panel active">
+                        <div class="form-panel" style="max-width: 100%;">
+                            <h3>Shipping Address</h3>
+                            <form id="shipping-form" data-tool-name="submit_shipping_address"
+                                data-tool-description="Enter the shipping address for the order" data-tool-open-world
+                                onsubmit="event.preventDefault(); goToCheckoutStep(2); showToast('📦 Shipping saved');">
+                                <div class="form-row">
+                                    <div>
+                                        <label for="ship-first">First Name</label>
+                                        <input type="text" id="ship-first" name="shipFirst" required
+                                            data-tool-param="Recipient's first name">
+                                    </div>
+                                    <div>
+                                        <label for="ship-last">Last Name</label>
+                                        <input type="text" id="ship-last" name="shipLast" required
+                                            data-tool-param="Recipient's last name">
+                                    </div>
+                                </div>
+                                <label for="ship-address">Street Address</label>
+                                <input type="text" id="ship-address" name="address" required
+                                    data-tool-param="Street address line">
+                                <div class="form-row">
+                                    <div>
+                                        <label for="ship-city">City</label>
+                                        <input type="text" id="ship-city" name="city" required
+                                            data-tool-param="City name">
+                                    </div>
+                                    <div>
+                                        <label for="ship-state">State</label>
+                                        <select id="ship-state" name="state" data-tool-param="US state abbreviation">
+                                            <option value="">Select...</option>
+                                            <option value="CA">California</option>
+                                            <option value="NY">New York</option>
+                                            <option value="TX">Texas</option>
+                                            <option value="FL">Florida</option>
+                                            <option value="WA">Washington</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label for="ship-zip">ZIP Code</label>
+                                        <input type="text" id="ship-zip" name="zip" required
+                                            data-tool-param="5-digit ZIP code" pattern="[0-9]{5}">
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn-primary">Continue to Payment →</button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Payment -->
+                    <div id="checkout-step-2" class="checkout-panel">
+                        <div class="form-panel" style="max-width: 100%;">
+                            <h3>Payment Details</h3>
+                            <form id="payment-form" data-tool-name="submit_payment_info"
+                                data-tool-description="Enter credit card payment details for the order"
+                                data-tool-open-world data-tool-destructive
+                                onsubmit="event.preventDefault(); goToCheckoutStep(3); showToast('💳 Payment saved');">
+                                <label for="card-name">Name on Card</label>
+                                <input type="text" id="card-name" name="cardName" required
+                                    data-tool-param="Name as it appears on the card">
+                                <label for="card-number">Card Number</label>
+                                <input type="text" id="card-number" name="cardNumber" placeholder="4242 4242 4242 4242"
+                                    required data-tool-param="16-digit credit card number">
+                                <div class="form-row">
+                                    <div>
+                                        <label for="card-expiry">Expiry</label>
+                                        <input type="text" id="card-expiry" name="expiry" placeholder="MM/YY" required
+                                            data-tool-param="Card expiration date in MM/YY format">
+                                    </div>
+                                    <div>
+                                        <label for="card-cvv">CVV</label>
+                                        <input type="text" id="card-cvv" name="cvv" placeholder="123" required
+                                            data-tool-param="3-digit security code on the back of the card">
+                                    </div>
+                                </div>
+                                <div style="display: flex; gap: 0.5rem;">
+                                    <button type="button" class="btn-ghost" onclick="goToCheckoutStep(1)">←
+                                        Back</button>
+                                    <button type="submit" class="btn-primary">Review Order →</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Review & Place Order -->
+                    <div id="checkout-step-3" class="checkout-panel">
+                        <div class="form-panel" style="max-width: 100%;">
+                            <h3>Review Your Order</h3>
+                            <div id="order-summary" style="margin-bottom: 1rem; color: var(--muted);">
+                                <p>Items: <strong>2</strong> | Total: <strong>$249.98</strong></p>
+                                <p>Shipping to: <strong>123 Main St, CA 90210</strong></p>
+                                <p>Card: <strong>•••• 4242</strong></p>
+                            </div>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <button type="button" class="btn-ghost" onclick="goToCheckoutStep(2)">← Back</button>
+                                <button id="place-order-btn" class="btn-primary" aria-label="Place Order"
+                                    data-tool-name="place_order"
+                                    data-tool-description="Confirm and place the order, charging the credit card"
+                                    data-tool-destructive data-tool-open-world
+                                    onclick="showToast('🎉 Order placed successfully!'); navigate('shop');">
+                                    🛒 Place Order — $249.98
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ═════════════════════════════════════════════════════════════ -->
+                <!-- PAGE: SETTINGS                                               -->
+                <!-- ═════════════════════════════════════════════════════════════ -->
+                <div id="page-settings" class="page">
+                    <h2 style="margin-bottom: 1.5rem;">⚙️ Settings</h2>
+
+                    <div class="form-panel" style="max-width: 100%; margin-bottom: 1.5rem;">
+                        <h3>Preferences</h3>
+                        <form id="preferences-form" data-tool-name="update_preferences"
+                            data-tool-description="Update user notification and display preferences"
+                            data-tool-idempotent onsubmit="event.preventDefault(); showToast('✅ Preferences saved');">
+                            <div class="toggle">
+                                <input type="checkbox" id="pref-email" name="emailNotifs" checked>
+                                <label for="pref-email" style="margin-bottom: 0;">Email notifications</label>
+                            </div>
+                            <div class="toggle">
+                                <input type="checkbox" id="pref-push" name="pushNotifs">
+                                <label for="pref-push" style="margin-bottom: 0;">Push notifications</label>
+                            </div>
+                            <div class="toggle">
+                                <input type="checkbox" id="pref-darkmode" name="darkMode" checked>
+                                <label for="pref-darkmode" style="margin-bottom: 0;">Dark mode</label>
+                            </div>
+                            <label for="pref-lang">Language</label>
+                            <select id="pref-lang" name="language" data-tool-param="Preferred language">
+                                <option value="en">English</option>
+                                <option value="es">Español</option>
+                                <option value="fr">Français</option>
+                                <option value="de">Deutsch</option>
+                                <option value="ja">日本語</option>
+                            </select>
+                            <button type="submit" class="btn-primary btn-sm">Save Preferences</button>
+                        </form>
+                    </div>
+
+                    <div class="form-panel" style="max-width: 100%; margin-bottom: 1.5rem;">
+                        <h3>Change Password</h3>
+                        <form id="change-password-form" action="/api/user/password" method="PUT"
+                            data-tool-name="change_password" data-tool-description="Change the user's account password"
+                            data-tool-open-world onsubmit="event.preventDefault(); showToast('🔑 Password changed');">
+                            <label for="current-pw">Current Password</label>
+                            <input type="password" id="current-pw" name="currentPassword" required>
+                            <label for="new-pw">New Password</label>
+                            <input type="password" id="new-pw" name="newPassword" required
+                                data-tool-param="The new password (min 8 characters)">
+                            <label for="confirm-pw">Confirm New Password</label>
+                            <input type="password" id="confirm-pw" name="confirmPassword" required>
+                            <button type="submit" class="btn-primary btn-sm">Update Password</button>
+                        </form>
+                    </div>
+
+                    <div class="form-panel" style="max-width: 100%; border-color: var(--danger);">
+                        <h3 style="color: var(--danger);">⚠️ Danger Zone</h3>
+                        <p style="color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem;">These actions are
+                            permanent and cannot be undone.</p>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button id="export-data-btn" class="btn-ghost btn-sm" aria-label="Export All Data"
+                                data-tool-name="export_user_data"
+                                data-tool-description="Export all user data as a downloadable JSON file"
+                                data-tool-readonly onclick="showToast('📥 Data export started...')">📥 Export
+                                Data</button>
+                            <button id="delete-all-btn" class="btn-danger btn-sm" aria-label="Delete All Data"
+                                data-tool-destructive
+                                onclick="if(confirm('DELETE ALL DATA? This cannot be undone.')) showToast('💀 All data deleted')">
+                                🗑️ Delete All Data
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ═════════════════════════════════════════════════════════════ -->
+                <!-- PAGE: ADMIN (should be ignored by SDK)                       -->
+                <!-- ═════════════════════════════════════════════════════════════ -->
+                <div id="page-admin" class="page">
+                    <h2 style="margin-bottom: 1.5rem;">🔒 Admin Panel</h2>
+                    <div class="form-panel" style="max-width: 100%;" data-tool-ignore>
+                        <h3>Admin-Only Controls</h3>
+                        <p style="color: var(--muted); margin-bottom: 1rem;">
+                            This entire panel is marked with <code>data-tool-ignore</code> — the SDK should skip
+                            everything inside.
+                        </p>
+                        <form id="admin-form" data-tool-ignore onsubmit="event.preventDefault();">
+                            <label for="admin-sql">Raw SQL Query</label>
+                            <textarea id="admin-sql" name="sql" placeholder="SELECT * FROM users LIMIT 10"></textarea>
+                            <button type="submit" class="btn-danger">Execute Query</button>
+                        </form>
+                        <button id="admin-reboot" aria-label="Reboot Server" data-tool-ignore class="btn-danger btn-sm"
+                            style="margin-top: 1rem;" onclick="showToast('🔄 Server rebooted')">🔄 Reboot
+                            Server</button>
+                    </div>
+                </div>
+
+            </div><!-- .content -->
+        </div><!-- .main -->
+    </div><!-- .app -->
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- MODALS                                                             -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+
+    <!-- Forgot Password Modal -->
+    <div class="modal-backdrop" id="forgot-pw-modal">
+        <div class="modal">
+            <h3>🔑 Reset Password</h3>
+            <form id="forgot-pw-form" action="/api/auth/reset" method="POST" data-tool-name="request_password_reset"
+                data-tool-description="Send a password reset email to the specified address" data-tool-open-world
+                onsubmit="event.preventDefault(); closeModal('forgot-pw-modal'); showToast('📧 Reset email sent!');">
+                <label for="reset-email">Email Address</label>
+                <input type="email" id="reset-email" name="resetEmail" placeholder="you@example.com" required
+                    data-tool-param="Email address to send the reset link to">
+                <div style="display: flex; gap: 0.5rem;">
+                    <button type="submit" class="btn-primary btn-sm">Send Reset Link</button>
+                    <button type="button" class="btn-ghost btn-sm"
+                        onclick="closeModal('forgot-pw-modal')">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Quick View Modal (dynamically populated) -->
+    <div class="modal-backdrop" id="quick-view-modal">
+        <div class="modal">
+            <h3 id="qv-title">Product Name</h3>
+            <p id="qv-desc" style="color: var(--muted); margin-bottom: 1rem;"></p>
+            <p id="qv-price" style="color: var(--success); font-weight: 700; font-size: 1.2rem; margin-bottom: 1rem;">
+            </p>
+            <form id="quick-add-form" data-tool-name="quick_add_to_cart"
+                data-tool-description="Add the currently viewed product to cart with specified quantity"
+                onsubmit="event.preventDefault(); addToCart(this.dataset.productId, parseInt(this.qty.value)); closeModal('quick-view-modal');">
+                <div style="display: flex; gap: 0.5rem; align-items: end;">
+                    <div>
+                        <label for="qv-qty">Quantity</label>
+                        <input type="number" id="qv-qty" name="qty" value="1" min="1" max="99" style="width: 80px;"
+                            data-tool-param="Number of items to add (1-99)">
+                    </div>
+                    <button type="submit" class="btn-primary">Add to Cart</button>
+                </div>
+            </form>
+            <button class="btn-ghost btn-sm" style="margin-top: 1rem;"
+                onclick="closeModal('quick-view-modal')">Close</button>
+        </div>
+    </div>
+
+    <!-- Review Modal -->
+    <div class="modal-backdrop" id="review-modal">
+        <div class="modal">
+            <h3>⭐ Write a Review</h3>
+            <form id="review-form" action="/api/reviews" method="POST" data-tool-name="submit_product_review"
+                data-tool-description="Submit a star rating and text review for a product" data-tool-open-world
+                onsubmit="event.preventDefault(); closeModal('review-modal'); showToast('⭐ Review submitted!');">
+                <label for="review-rating">Rating</label>
+                <select id="review-rating" name="rating" data-tool-param="Star rating from 1 to 5">
+                    <option value="5">⭐⭐⭐⭐⭐ (5)</option>
+                    <option value="4">⭐⭐⭐⭐ (4)</option>
+                    <option value="3">⭐⭐⭐ (3)</option>
+                    <option value="2">⭐⭐ (2)</option>
+                    <option value="1">⭐ (1)</option>
+                </select>
+                <label for="review-text">Your Review</label>
+                <textarea id="review-text" name="reviewText" rows="4" placeholder="Share your experience..."
+                    data-tool-param="The text content of the review" required></textarea>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button type="submit" class="btn-primary btn-sm">Submit Review</button>
+                    <button type="button" class="btn-ghost btn-sm" onclick="closeModal('review-modal')">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- Toast Container                                                    -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- Debug Panel (fixed at bottom)                                      -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <div class="debug-panel" style="position: fixed; bottom: 0; left: 240px; right: 0; z-index: 200;">
+        🔮 <strong>3rd Eye Debug</strong> |
+        <code>ThirdEye.getScannedElements().length</code> =
+        <span id="debug-elements">-</span> |
+        <code>ThirdEye.getSchemas().length</code> =
+        <span id="debug-schemas">-</span> |
+        <code>isWatcherActive()</code> =
+        <span id="debug-watcher">-</span> |
+        Route: <code id="debug-route">#shop</code>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- APPLICATION JAVASCRIPT                                             -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <script>
+        // ── Product Data ─────────────────────────────────────────────────────
+        const PRODUCTS = [
+            { id: 'p1', name: 'Wireless Headphones Pro', price: 129.99, emoji: '🎧', category: 'electronics', desc: 'Premium noise-cancelling headphones with 30hr battery.' },
+            { id: 'p2', name: 'Smart Watch Ultra', price: 299.99, emoji: '⌚', category: 'electronics', desc: 'Health tracking, GPS, and always-on display.' },
+            { id: 'p3', name: 'Mechanical Keyboard RGB', price: 89.99, emoji: '⌨️', category: 'electronics', desc: 'Cherry MX switches with per-key RGB backlighting.' },
+            { id: 'p4', name: 'Running Shoes Air', price: 149.99, emoji: '👟', category: 'sports', desc: 'Lightweight carbon-plate racing shoes.' },
+            { id: 'p5', name: 'Vintage Denim Jacket', price: 79.99, emoji: '🧥', category: 'fashion', desc: 'Classic wash with modern fit.' },
+            { id: 'p6', name: 'Standing Desk Pro', price: 449.99, emoji: '🪑', category: 'home', desc: 'Electric sit-stand desk with memory presets.' },
+            { id: 'p7', name: 'USB-C Hub 7-in-1', price: 49.99, emoji: '🔌', category: 'electronics', desc: 'HDMI, USB-A, SD, ethernet, PD charging.' },
+            { id: 'p8', name: 'Yoga Mat Premium', price: 39.99, emoji: '🧘', category: 'sports', desc: 'Non-slip, extra cushion, eco-friendly.' },
+        ];
+
+        let cart = [];
+
+        // ── Render Products ──────────────────────────────────────────────────
+        function renderProducts() {
+            const grid = document.getElementById('product-grid');
+            grid.innerHTML = PRODUCTS.map(p => `
+    <div class="card" data-product-id="${p.id}">
+      <div class="card-img">${p.emoji}</div>
+      <div class="card-body">
+        <div class="card-title">${p.name}</div>
+        <div style="color: var(--muted); font-size: 0.8rem; margin: 0.25rem 0 0.5rem;">${p.desc}</div>
+        <div class="card-price">$${p.price.toFixed(2)}</div>
+        <div class="card-actions">
+          <button class="btn-primary btn-sm" aria-label="Add ${p.name} to cart"
+            onclick="addToCart('${p.id}')">🛒 Add</button>
+          <button class="btn-ghost btn-sm" aria-label="Quick view ${p.name}"
+            onclick="openQuickView('${p.id}')">👁️ View</button>
+          <button class="btn-ghost btn-sm" aria-label="Review ${p.name}"
+            onclick="showModal('review-modal')">⭐</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+        }
+
+        // ── Cart Logic ───────────────────────────────────────────────────────
+        function addToCart(id, qty = 1) {
+            const product = PRODUCTS.find(p => p.id === id);
+            if (!product) return;
+            const existing = cart.find(i => i.id === id);
+            if (existing) { existing.qty += qty; } else { cart.push({ ...product, qty }); }
+            updateCartUI();
+            showToast(`🛒 Added ${product.name} (×${qty})`);
+        }
+
+        function clearCart() {
+            cart = [];
+            updateCartUI();
+        }
+
+        function removeFromCart(id) {
+            cart = cart.filter(i => i.id !== id);
+            updateCartUI();
+            showToast('🗑️ Item removed');
+        }
+
+        function updateCartUI() {
+            const tbody = document.getElementById('cart-items');
+            const count = document.getElementById('cart-count');
+            count.textContent = cart.reduce((s, i) => s + i.qty, 0);
+            if (cart.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--muted); padding: 2rem;">Cart is empty</td></tr>';
+                return;
+            }
+            tbody.innerHTML = cart.map(item => `
+    <tr>
+      <td>${item.emoji} ${item.name}</td>
+      <td>$${item.price.toFixed(2)}</td>
+      <td>${item.qty}</td>
+      <td>$${(item.price * item.qty).toFixed(2)}</td>
+      <td><button class="btn-danger btn-sm" onclick="removeFromCart('${item.id}')" aria-label="Remove ${item.name}">✕</button></td>
+    </tr>
+  `).join('');
+        }
+
+        // ── SPA Router ───────────────────────────────────────────────────────
+        function navigate(page) {
+            window.location.hash = '#' + page;
+        }
+
+        function handleRoute() {
+            const hash = window.location.hash.slice(1) || 'shop';
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-link').forEach(a => a.classList.remove('active'));
+            const target = document.getElementById('page-' + hash);
+            if (target) target.classList.add('active');
+            const link = document.querySelector(`.nav-link[data-page="${hash}"]`);
+            if (link) link.classList.add('active');
+            document.getElementById('debug-route').textContent = '#' + hash;
+        }
+
+        window.addEventListener('hashchange', handleRoute);
+        window.addEventListener('popstate', handleRoute);
+        document.querySelectorAll('.nav-link').forEach(a => {
+            a.addEventListener('click', e => {
+                e.preventDefault();
+                navigate(a.dataset.page);
+            });
+        });
+
+        // ── Tabs ─────────────────────────────────────────────────────────────
+        function switchTab(tabEl, panelId) {
+            tabEl.parentElement.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            tabEl.classList.add('active');
+            tabEl.closest('.page').querySelectorAll('.tab-panel').forEach(p => p.style.display = 'none');
+            document.getElementById(panelId).style.display = 'block';
+        }
+
+        // ── Checkout Steps ───────────────────────────────────────────────────
+        function goToCheckoutStep(step) {
+            for (let i = 1; i <= 3; i++) {
+                const panel = document.getElementById('checkout-step-' + i);
+                const indicator = document.getElementById('step-' + i + '-indicator');
+                panel.classList.toggle('active', i === step);
+                indicator.classList.remove('active', 'done');
+                if (i === step) indicator.classList.add('active');
+                if (i < step) indicator.classList.add('done');
+            }
+        }
+
+        // ── Modals ───────────────────────────────────────────────────────────
+        function showModal(id) {
+            document.getElementById(id).classList.add('open');
+        }
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('open');
+        }
+        // Close modal on backdrop click
+        document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+            backdrop.addEventListener('click', e => {
+                if (e.target === backdrop) backdrop.classList.remove('open');
+            });
+        });
+
+        // ── Quick View ───────────────────────────────────────────────────────
+        function openQuickView(id) {
+            const product = PRODUCTS.find(p => p.id === id);
+            if (!product) return;
+            document.getElementById('qv-title').textContent = product.emoji + ' ' + product.name;
+            document.getElementById('qv-desc').textContent = product.desc;
+            document.getElementById('qv-price').textContent = '$' + product.price.toFixed(2);
+            document.getElementById('quick-add-form').dataset.productId = id;
+            showModal('quick-view-modal');
+        }
+
+        // ── Toasts ───────────────────────────────────────────────────────────
+        function showToast(msg) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.textContent = msg;
+            container.appendChild(toast);
+            setTimeout(() => { toast.style.opacity = '0'; toast.style.transition = 'opacity 0.3s'; setTimeout(() => toast.remove(), 300); }, 3000);
+        }
+
+        // ── Filter panel toggle ──────────────────────────────────────────────
+        document.getElementById('filter-toggle')?.addEventListener('click', () => {
+            const panel = document.getElementById('filters-panel');
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+        });
+
+        // ── Debug panel updater ──────────────────────────────────────────────
+        setInterval(() => {
+            if (typeof ThirdEye !== 'undefined') {
+                document.getElementById('debug-elements').textContent = ThirdEye.getScannedElements?.()?.length ?? '-';
+                document.getElementById('debug-schemas').textContent = ThirdEye.getSchemas?.()?.length ?? '-';
+                document.getElementById('debug-watcher').textContent = ThirdEye.isWatcherActive?.() ?? '-';
+            }
+        }, 1000);
+
+        // ── Init ─────────────────────────────────────────────────────────────
+        renderProducts();
+        handleRoute();
+    </script>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- 3RD EYE SDK                                                        -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <script src="../sdk-demo/3rdeye.min.js" data-site-id="neonmart_001" data-endpoint="http://localhost:3002"
+        data-debug="true" data-ingest-url="http://localhost:3002/api/v1/telemetry">
+        </script>
+
+</body>
+
+</html>

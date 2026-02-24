@@ -46,9 +46,9 @@ await ThirdEye.init({
 
 ```
 1. Feature Detect      → Check navigator.modelContext
-2. DOM Scan            → Find <form> and <button> elements
-3. Schema Generation   → AI-first (GPT-4o-mini), local fallback
-4. Annotation Inference→ readOnlyHint, destructiveHint, etc.
+2. DOM Scan            → Find <form>, <button>, and annotated elements
+3. Schema Generation   → AI-first (GPT-4o-mini), local fallback, declarative overrides
+4. Annotation Inference→ readOnlyHint, destructiveHint, etc. (auto or data-tool-*)
 5. Tool Registration   → registerTool() with annotations
 6. Context Provisioning→ provideContext() with page metadata
 7. Live Watcher        → MutationObserver + SPA navigation
@@ -102,6 +102,25 @@ When an AI agent calls a tool marked as `destructiveHint: true`:
 3. If the user denies, the tool returns `{ success: false, reason: "User denied" }`
 4. If confirmed, the tool executes normally
 
+### Declarative Overrides (`data-tool-*`)
+
+Developers can annotate any HTML element with `data-tool-*` attributes to override auto-generated values or register non-standard elements as tools:
+
+| Attribute | Description |
+|-----------|-------------|
+| `data-tool-name` | Override tool name (e.g. `"submit_feedback"`) |
+| `data-tool-description` | Override description |
+| `data-tool-readonly` | Set `readOnlyHint: true` |
+| `data-tool-destructive` | Set `destructiveHint: true` |
+| `data-tool-idempotent` | Set `idempotentHint: true` |
+| `data-tool-open-world` | Set `openWorldHint: true` |
+| `data-tool-param` | Override parameter description (on `<input>`/`<select>`/`<textarea>`) |
+| `data-tool-ignore` | Exclude element from scanning |
+
+Non-standard elements (`<div>`, `<a>`, `<span>`) with `data-tool-name` are detected by `scanAnnotated()` and treated as click-to-execute tools.
+
+If **all** elements have both `data-tool-name` and `data-tool-description`, the AI API call is skipped entirely — zero latency, zero cost.
+
 ---
 
 ## Public API
@@ -143,8 +162,8 @@ interface ThirdEyeConfig {
 
 | File | Purpose |
 |------|---------|
-| `types.ts` | All TypeScript interfaces: `ToolSchema`, `ToolAnnotations`, `ModelContextAPI`, `WebMCPToolDefinition`, `ModelContextClient`, telemetry events |
-| `scanner.ts` | DOM auto-scanner — finds `<form>` and `<button>` elements, extracts metadata (inputs, labels, aria-labels) |
+| `types.ts` | All TypeScript interfaces: `ToolSchema`, `ToolAnnotations`, `ScannedElement` (with override fields), `ModelContextAPI`, `WebMCPToolDefinition`, `ModelContextClient`, telemetry events |
+| `scanner.ts` | DOM auto-scanner — 3-pass: forms, buttons, annotated elements (`data-tool-name`). Reads `data-tool-*` overrides and `data-tool-ignore`. |
 | `schema.ts` | Schema generator — AI-first with local fallback, annotation inference, `localStorage` caching (5min TTL) |
 | `registrar.ts` | Tool registration — `registerTool()` with annotations, `unregisterTool()` for stale tools, `requestUserInteraction()` for destructive tools, telemetry wrapping |
 | `watcher.ts` | Live DOM watcher — `MutationObserver`, `popstate`/`hashchange`, 300ms debounce, intelligent diffing |
